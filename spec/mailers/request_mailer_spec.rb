@@ -289,28 +289,30 @@ describe RequestMailer, "when sending reminders to requesters to classify a resp
     RequestMailer.alert_new_response_reminders_internal(7, 'new_response_reminder_1')
   end
 
-  it 'should ask for all requests that are awaiting description and whose latest response is older
-        than the number of days given and that are not the holding pen' do
-    expected_conditions = [ "awaiting_description = ?
-                                 AND (SELECT info_request_events.created_at
-                                      FROM info_request_events, incoming_messages
-                                       WHERE info_request_events.info_request_id = info_requests.id
-                                       AND info_request_events.event_type = 'response'
-                                       AND incoming_messages.id = info_request_events.incoming_message_id
-                                       AND incoming_messages.prominence = 'normal'
-                                      ORDER BY created_at desc LIMIT 1) < ?
-                                 AND url_title != 'holding_pen'
-                                 AND user_id IS NOT NULL".split(' ').join(' '),
-                            true, Time.now - 7.days ]
+  it 'should ask for all requests that are awaiting description and whose
+      latest response is older than the number of days given and that are not
+      in the holding pen' do
+    expect(InfoRequest).to receive(:find) do |all, query_params|
+      # check for awaiting description
+      expect(query_params[:conditions][0]).
+        to include("awaiting_description = ?")
+      expect(query_params[:conditions][1]).to eq(true)
 
-    # compare the query string ignoring any spacing differences
-    expect(InfoRequest).to receive(:find) { |all, query_params|
-      query_string = query_params[:conditions][0]
-      query_params[:conditions][0] = query_string.split(' ').join(' ')
-      expect(query_params[:conditions]).to eq(expected_conditions)
+      # check last public response older than 7 days
+      expect(query_params[:conditions][0]).
+        to include("last_public_response_at < ?")
+      expect(query_params[:conditions][2]).to eq(Time.now - 7.days)
+
+      # check for user
+      expect(query_params[:conditions][0]).to include("user_id IS NOT NULL")
+
+      # check not holding pen
+      expect(query_params[:conditions][0]).
+        to include("url_title != 'holding_pen'")
+
       expect(query_params[:include]).to eq([ :user ])
       expect(query_params[:order]).to eq('info_requests.id')
-    }.and_return [@mock_request]
+    end.and_return [@mock_request]
 
     send_alerts
   end

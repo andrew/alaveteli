@@ -1209,78 +1209,53 @@ describe InfoRequest do
     end
 
     it 'asks for requests using any limit param supplied' do
-      expect(InfoRequest).to receive(:find).with(:all, {:select => anything,
-                                                    :order => anything,
-                                                    :conditions=> anything,
-                                                    :limit => 5})
+      expect(InfoRequest).to receive(:find).
+        with(:all, hash_including(:limit => 5))
       InfoRequest.find_old_unclassified(:limit => 5)
     end
 
     it 'asks for requests using any offset param supplied' do
-      expect(InfoRequest).to receive(:find).with(:all, {:select => anything,
-                                                    :order => anything,
-                                                    :conditions=> anything,
-                                                    :offset => 100})
+      expect(InfoRequest).to receive(:find).
+        with(:all, hash_including(:offset => 100))
       InfoRequest.find_old_unclassified(:offset => 100)
     end
 
     it 'does not limit the number of requests returned by default' do
-      expect(InfoRequest).not_to receive(:find).with(:all, {:select => anything,
-                                                        :order => anything,
-                                                        :conditions=> anything,
-                                                        :limit => anything})
+      expect(InfoRequest).to receive(:find).
+        with(:all, hash_excluding(:limit => anything))
       InfoRequest.find_old_unclassified
     end
 
     it 'adds extra conditions if supplied' do
-      expected_conditions = ["awaiting_description = ?
-                                    AND (SELECT info_request_events.created_at
-                                         FROM info_request_events, incoming_messages
-                                         WHERE info_request_events.info_request_id = info_requests.id
-                                         AND info_request_events.event_type = 'response'
-                                         AND incoming_messages.id = info_request_events.incoming_message_id
-                                         AND incoming_messages.prominence = 'normal'
-                                         ORDER BY created_at desc LIMIT 1) < ?
-                                    AND url_title != 'holding_pen'
-                                    AND user_id IS NOT NULL
-                                    AND prominence != 'backpage'".split(' ').join(' '),
-                             true, Time.now - 21.days]
-      # compare conditions ignoring whitespace differences
-      expect(InfoRequest).to receive(:find) do |all, query_params|
-        query_string = query_params[:conditions][0]
-        query_params[:conditions][0] = query_string.split(' ').join(' ')
-        expect(query_params[:conditions]).to eq(expected_conditions)
-      end
+      expect(InfoRequest).to receive(:find).
+        with(:all, hash_including(
+          {:conditions => include(/prominence != 'backpage'/)}))
       InfoRequest.find_old_unclassified({:conditions => ["prominence != 'backpage'"]})
     end
 
-    it 'asks the database for requests that are awaiting description, have a last public response older
-        than 21 days old, have a user, are not the holding pen and are not backpaged' do
-      expected_conditions = ["awaiting_description = ?
-                                    AND (SELECT info_request_events.created_at
-                                         FROM info_request_events, incoming_messages
-                                         WHERE info_request_events.info_request_id = info_requests.id
-                                         AND info_request_events.event_type = 'response'
-                                         AND incoming_messages.id = info_request_events.incoming_message_id
-                                         AND incoming_messages.prominence = 'normal'
-                                         ORDER BY created_at desc LIMIT 1) < ?
-                                    AND url_title != 'holding_pen'
-                                    AND user_id IS NOT NULL".split(' ').join(' '),
-                             true, Time.now - 21.days]
-      expected_select = "*, (SELECT info_request_events.created_at
-                                   FROM info_request_events, incoming_messages
-                                   WHERE info_request_events.info_request_id = info_requests.id
-                                   AND info_request_events.event_type = 'response'
-                                   AND incoming_messages.id = info_request_events.incoming_message_id
-                                   AND incoming_messages.prominence = 'normal'
-                                   ORDER BY created_at desc LIMIT 1)
-                                   AS last_response_time".split(' ').join(' ')
+    it 'asks the database for requests that are awaiting description, have a
+        last public response older than 21 days old, have a user, are not the
+        holding pen' do
       expect(InfoRequest).to receive(:find) do |all, query_params|
-        query_string = query_params[:conditions][0]
-        query_params[:conditions][0] = query_string.split(' ').join(' ')
-        expect(query_params[:conditions]).to eq(expected_conditions)
-        expect(query_params[:select].split(' ').join(' ')).to eq(expected_select)
-        expect(query_params[:order]).to eq("last_response_time")
+        # check for awaiting description
+        expect(query_params[:conditions][0]).
+          to include("awaiting_description = ?")
+        expect(query_params[:conditions][1]).to eq(true)
+
+        # check last public response older than 21 days
+        expect(query_params[:conditions][0]).
+          to include("last_public_response_at < ?")
+        expect(query_params[:conditions][2]).to eq(Time.now - 21.days)
+
+        # check for user
+        expect(query_params[:conditions][0]).to include("user_id IS NOT NULL")
+
+        # check not holding pen
+        expect(query_params[:conditions][0]).
+          to include("url_title != 'holding_pen'")
+
+        # check the order
+        expect(query_params[:order]).to eq("last_public_response_at")
       end
       InfoRequest.find_old_unclassified
     end
