@@ -193,6 +193,23 @@ class IncomingMessage < ActiveRecord::Base
     super
   end
 
+  after_update :update_cached_datestamp
+  # This method updates the cached column of the InfoRequest that
+  # stores the last created_at date of relevant events
+  # when updating an IncomingMessage associated with the request
+  def update_cached_datestamp
+    if prominence == 'normal' && response_event
+      self.info_request.send "last_public_response_at=",
+                              response_event.created_at
+    elsif info_request.get_last_public_response_event
+      self.info_request.send "last_public_response_at=",
+                             info_request.get_last_public_response_event.created_at
+    else
+      self.info_request.send "last_public_response_at=", nil
+    end
+    info_request.save
+  end
+
   # And look up by URL part number and display filename to get an attachment
   # TODO: relies on extract_attachments calling MailHandler.ensure_parts_counted
   # The filename here is passed from the URL parameter, so it's the

@@ -286,13 +286,43 @@ describe InfoRequestEvent do
   end
 
   describe 'after saving' do
+    let(:request) { FactoryGirl.create(:info_request) }
+
     it 'should mark the model for reindexing in xapian if there is no no_xapian_reindex flag on the object' do
-      event = InfoRequestEvent.new(:info_request => mock_model(InfoRequest),
+      event = InfoRequestEvent.new(:info_request => request,
                                    :event_type => 'sent',
                                    :params => {})
       expect(event).to receive(:xapian_mark_needs_index)
       event.run_callbacks(:save)
     end
+
+    context "the incoming_message is not hidden" do
+
+      it "updates the parent info_request's last_public_response_at value" do
+        im = FactoryGirl.create(:incoming_message)
+        response_event = FactoryGirl.
+                          create(:info_request_event, :event_type => 'response',
+                                                      :info_request => request,
+                                                      :incoming_message => im)
+        expect(request.last_public_response_at).to be_within(0.001.seconds).
+            of response_event.created_at
+      end
+
+    end
+
+    context "the incoming_message is hidden" do
+
+      it "sets the parent info_request's last_public_response_at to nil" do
+        im = FactoryGirl.create(:incoming_message, :prominence => 'hidden')
+        response_event = FactoryGirl.
+                          create(:info_request_event, :event_type => 'response',
+                                                      :info_request => request,
+                                                      :incoming_message => im)
+        expect(request.last_public_response_at).to be_nil
+      end
+
+    end
+
   end
 
   describe "should know" do
@@ -447,6 +477,53 @@ describe InfoRequestEvent do
       event.destroy
       expect(TrackThingsSentEmail.where(:info_request_event_id => event.id)).
         to be_empty
+    end
+
+    context "and there is no previous response event" do
+
+      let(:request) { FactoryGirl.create(:info_request) }
+
+      it "sets the parent info_request's last_public_response_at value to nil" do
+        im = FactoryGirl.create(:incoming_message)
+        response_event = FactoryGirl.
+                           create(:info_request_event, :event_type => 'response',
+                                                       :info_request => request,
+                                                       :incoming_message => im)
+        response_event.destroy
+        expect(request.last_public_response_at).to be_nil
+      end
+
+    end
+
+    context "and there is a previous response event" do
+
+      let(:request) { FactoryGirl.create(:info_request) }
+
+      it "sets the parent info_request's last_public_response_at value \
+          to the value from the previous response event" do
+        im1 = FactoryGirl.create(:incoming_message)
+        im2 = FactoryGirl.create(:incoming_message)
+        old_response_event = FactoryGirl.
+                           create(:info_request_event, :event_type => 'response',
+                                                       :info_request => request,
+                                                       :incoming_message => im1)
+
+        InfoRequestEvent.create(:info_request => request,
+                                :event_type => 'sent',
+                                :params => {})
+
+        response_event = FactoryGirl.
+                           create(:info_request_event, :event_type => 'response',
+                                                       :info_request => request,
+                                                       :incoming_message => im2)
+        response_event.destroy
+
+        # oddly stated as a workaround for the accuracy differences in
+        # Ruby's timestamp and database's - http://stackoverflow.com/a/26207378
+        expect(request.last_public_response_at).to be_within(0.001.seconds).
+          of old_response_event.created_at
+      end
+
     end
   end
 end

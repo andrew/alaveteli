@@ -377,6 +377,21 @@ class InfoRequestEvent < ActiveRecord::Base
     event_type == 'response'
   end
 
+  after_save :update_cached_datestamp
+  after_destroy :update_cached_datestamp
+  # This method updates the cached column of the InfoRequest that
+  # stores the last created_at date of relevant events
+  # when saving or destroying an InfoRequestEvent associated with the request
+  def update_cached_datestamp
+    if info_request.get_last_public_response_event
+      self.info_request.send "last_public_response_at=",
+                             info_request.get_last_public_response_event.created_at
+    else
+      self.info_request.send "last_public_response_at=", nil
+    end
+    info_request.save
+  end
+
   def same_email_as_previous_send?
     prev_addr = info_request.get_previous_email_sent_to(self)
     curr_addr = params[:email]
