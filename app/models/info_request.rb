@@ -57,6 +57,8 @@ class InfoRequest < ActiveRecord::Base
     :message => _('Please keep the summary short, like in the subject of an ' \
                   'email. You can use a phrase, rather than a full sentence.')
   }
+  validates_uniqueness_of :url_title,
+    :message => _("This url title is already in use, please try again")
 
   belongs_to :user
   validate :must_be_internal_or_external

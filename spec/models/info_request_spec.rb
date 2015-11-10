@@ -859,6 +859,15 @@ describe InfoRequest do
       expect(info_request.errors[:public_body_id]).to be_empty
     end
 
+    it "checks that the url_title is unique" do
+      FactoryGirl.create(:info_request, :url_title => 'test')
+      info_request = InfoRequest.new(:url_title => 'test')
+
+      info_request.valid?
+      expect(info_request.errors[:url_title]).
+        to include("This url title is already in use, please try again")
+    end
+
   end
 
   describe 'when generating a user name slug' do
