@@ -43,7 +43,8 @@ describe CommentController, "when commenting on a request" do
 
     expect(ActionMailer::Base.deliveries.size).to eq(0)
 
-    expect(response).to redirect_to(:controller => 'request', :action => 'show', :url_title => info_requests(:naughty_chicken_request).url_title)
+    expected_title = MySociety::Format.simplify_url_part(info_requests(:naughty_chicken_request).url_title, 'request', 32)
+    expect(response).to redirect_to(:controller => 'request', :action => 'show', :url_title => expected_title)
   end
 
   it "should give an error if the same request is submitted twice" do

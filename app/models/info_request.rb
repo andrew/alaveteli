@@ -57,8 +57,6 @@ class InfoRequest < ActiveRecord::Base
     :message => _('Please keep the summary short, like in the subject of an ' \
                   'email. You can use a phrase, rather than a full sentence.')
   }
-  validates_uniqueness_of :url_title,
-    :message => _("This url title is already in use, please try again")
 
   belongs_to :user
   validate :must_be_internal_or_external
@@ -273,7 +271,10 @@ class InfoRequest < ActiveRecord::Base
     update_url_title
   end
 
+  before_validation :update_url_title
+  before_save :update_url_title
   def update_url_title
+    return unless title
     url_title = MySociety::Format.simplify_url_part(title, 'request', 32)
     # For request with same title as others, add on arbitary numeric identifier
     unique_url_title = url_title
@@ -281,7 +282,7 @@ class InfoRequest < ActiveRecord::Base
     while InfoRequest.
             find_by_url_title(unique_url_title,
                               :conditions => id.nil? ? nil : ["id <> ?", id])
-      unique_url_title = url_title + "_" + suffix_num.to_s
+      unique_url_title = "#{url_title}_#{suffix_num}"
       suffix_num = suffix_num + 1
     end
     write_attribute(:url_title, unique_url_title)

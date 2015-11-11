@@ -53,13 +53,12 @@ describe InfoRequest do
     end
 
     it "adds the next sequential number to the url_title to make it unique" do
-      # will actually return the matching record but true is good enough here
       allow(InfoRequest).to receive(:find_by_url_title).
         with("test_title", :conditions => nil).
-          and_return(true)
+          and_return(mock_model(InfoRequest))
       allow(InfoRequest).to receive(:find_by_url_title).
         with("test_title_2", :conditions => nil).
-          and_return(true)
+          and_return(mock_model(InfoRequest))
 
       # not found - we can use this one
       allow(InfoRequest).to receive(:find_by_url_title).
@@ -69,6 +68,24 @@ describe InfoRequest do
       info_request = InfoRequest.new(:title => "Test title")
       expect(info_request.url_title).to eq("test_title_3")
     end
+
+    context "when a race condition creates a duplicate between new and save" do
+      # this appears to be happening in the request#new controller method
+      # we suspect (hope?) it's an accidental double press of 'Save'
+
+      it "picks the next available url_title instead of failing" do
+        public_body = FactoryGirl.create(:public_body)
+        user = FactoryGirl.create(:user)
+        first_request = InfoRequest.new(:title => "Test title",
+                                        :user => user,
+                                        :public_body => public_body)
+        second_request = FactoryGirl.create(:info_request, :title => "Test title")
+        first_request.save!
+        expect(first_request.url_title).to eq("test_title_2")
+      end
+
+    end
+
   end
 
   describe '.stop_new_responses_on_old_requests' do
@@ -857,15 +874,6 @@ describe InfoRequest do
 
       info_request.valid?
       expect(info_request.errors[:public_body_id]).to be_empty
-    end
-
-    it "checks that the url_title is unique" do
-      FactoryGirl.create(:info_request, :url_title => 'test')
-      info_request = InfoRequest.new(:url_title => 'test')
-
-      info_request.valid?
-      expect(info_request.errors[:url_title]).
-        to include("This url title is already in use, please try again")
     end
 
   end
