@@ -7,7 +7,9 @@
     <ul>
       <% if @info_request.comments_allowed? %>
         <li>
-          <%= raw(_('<a href="{{url}}">Add an annotation</a> (to help the requester or others)', :url => new_comment_url(:url_title => @info_request.url_title).html_safe)) %>
+          <%= raw(_('<a href="{{url}}">Add an annotation</a> (to help the ' \
+                      'requester or others)',
+                    :url => new_comment_url(:url_title => @info_request.url_title).html_safe)) %>
         </li>
       <% end %>
 
@@ -50,7 +52,8 @@
   <% end %>
 
   <div id="public_body_actions" class="public_body_actions">
-    <strong><%= _('{{public_body_name}} only:',:public_body_name=>h(@info_request.public_body.name) ) %> </strong>
+    <strong><%= _('{{authority_name}} only:',
+                  :authority_name => h(@info_request.public_body.name)) %></strong>
 
     <ul>
       <li>

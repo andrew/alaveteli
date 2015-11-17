@@ -33,13 +33,17 @@
 <% end %>
 
 <% if @batch %>
-  <% @title = _("Make an {{law_used_short}} request", :law_used_short=>h(@info_request.law_used_human(:short)))  %>
+  <% @title = _("Make an {{law_used_short}} request",
+                :law_used_short => h(@info_request.law_used_human(:short))) %>
 <% else %>
-  <% @title = _("Make an {{law_used_short}} request to '{{public_body_name}}'",:law_used_short=>h(@info_request.law_used_human(:short)),:public_body_name=>h(@info_request.public_body.name))  %>
+  <% @title = _("Make an {{law_used_short}} request to '{{authority_name}}'",
+                :law_used_short => h(@info_request.law_used_human(:short)),
+                :authority_name => h(@info_request.public_body.name)) %>
 <% end %>
 
 
-<%= form_for(@info_request, :url => (@batch ? new_batch_path : new_request_path), :html => { :id => 'write_form' }  ) do |f| %>
+<%= form_for(@info_request, :url => (@batch ? new_batch_path : new_request_path),
+                            :html => { :id => 'write_form' }  ) do |f| %>
   <div id="request_header" class="request_header">
     <div id="request_header_body" class="request_header_body">
       <h1><%= _('Make a request') %></h1>
@@ -64,7 +68,9 @@
         <div class="errorExplanation" id="errorExplanation">
           <ul>
             <li>
-              <%= _('You already created the same batch of requests on {{date}}.   You can either view the <a href="{{existing_batch}}">existing batch</a>, or edit the details below to make a new but similar batch of requests.', :date=>simple_date(@existing_batch.created_at), :existing_batch=>info_request_batch_path(@existing_batch)) %>
+              <%= _('You already created the same batch of requests on {{date}}.   You can either view the <a href="{{existing_batch}}">existing batch</a>, or edit the details below to make a new but similar batch of requests.',
+                    :date => simple_date(@existing_batch.created_at),
+                    :existing_batch => info_request_batch_path(@existing_batch)) %>
             </li>
           </ul>
         </div>
@@ -151,9 +157,15 @@
       <% unless @batch %>
         <p>
           <% if @info_request.public_body.info_requests.size > 0 %>
-            <%= _("Browse <a href='{{url}}'>other requests</a> to '{{public_body_name}}' for examples of how to word your request.", :public_body_name=>h(@info_request.public_body.name), :url=>public_body_path(@info_request.public_body)) %>
+            <%= _("Browse <a href='{{url}}'>other requests</a> to " \
+                     "'{{authority_name}}' for examples of how to word " \
+                     "your request.",
+                  :authority_name => h(@info_request.public_body.name),
+                  :url => public_body_path(@info_request.public_body)) %>
           <% else %>
-            <%= _("Browse <a href='{{url}}'>other requests</a> for examples of how to word your request.", :url=>request_list_successful_url) %>
+            <%= _("Browse <a href='{{url}}'>other requests</a> for examples " \
+                    "of how to word your request.",
+                  :url => request_list_successful_url) %>
           <% end %>
         </p>
       <% end %>
@@ -187,8 +199,12 @@
       <div class="advice-panel">
         <ul>
           <li><%= _('Write your request in <strong>simple, precise language</strong>.') %></li>
-          <li><%= _('Ask for <strong>specific</strong> documents or information, this site is not suitable for general enquiries.') %></li>
-          <li><%= _('<a href="{{url}}">Keep it <strong>focused</strong></a>, you\'ll be more likely to get what you want.', :url => (help_requesting_path + '#focused').html_safe) %></li>
+          <li><%= _('Ask for <strong>specific</strong> documents or ' \
+                       'information, this site is not suitable for general ' \
+                       'enquiries.') %></li>
+          <li><%= _('<a href="{{url}}">Keep it <strong>focused</strong></a>, ' \
+                       'you\'ll be more likely to get what you want.',
+                    :url => (help_requesting_path + '#focused').html_safe) %></li>
         </ul>
       </div>
     </div>
@@ -211,7 +227,8 @@
 
       <%= fields_for :outgoing_message do |o| %>
         <p>
-          <label class="form_label" for="outgoing_message_body"><%= _('Your request:') %></label>
+          <label class="form_label" for="outgoing_message_body">
+            <%= _('Your request:') %></label>
           <%= o.text_area :body, :rows => 20, :cols => 60 %>
         </p>
       <% end %>
